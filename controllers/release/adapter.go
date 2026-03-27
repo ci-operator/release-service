@@ -958,6 +958,7 @@ func (a *adapter) getCollectorsPipelineRunBuilder(pipelineType metadata.Pipeline
 
 	return utils.NewPipelineRunBuilder(pipelineType.String(), namespace).
 		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, integrationgitops.PipelinesAsCodePrefix)).
+		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, metadata.SpanContextAnnotation)).
 		WithFinalizer(metadata.ReleaseFinalizer).
 		WithLabels(map[string]string{
 			metadata.PipelinesTypeLabel:    pipelineType.String(),
@@ -1099,6 +1100,7 @@ func (a *adapter) createTenantCollectorsPipelineRun(releasePlan *v1alpha1.Releas
 func (a *adapter) createFinalPipelineRun(releasePlan *v1alpha1.ReleasePlan, snapshot *applicationapiv1alpha1.Snapshot) (*tektonv1.PipelineRun, error) {
 	builder := utils.NewPipelineRunBuilder(metadata.FinalPipelineType.String(), releasePlan.Namespace).
 		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, integrationgitops.PipelinesAsCodePrefix)).
+		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, metadata.SpanContextAnnotation)).
 		WithFinalizer(metadata.ReleaseFinalizer).
 		WithLabels(map[string]string{
 			metadata.ApplicationNameLabel:  releasePlan.Spec.Application,
@@ -1149,6 +1151,7 @@ func (a *adapter) createFinalPipelineRun(releasePlan *v1alpha1.ReleasePlan, snap
 func (a *adapter) createManagedPipelineRun(resources *loader.ProcessingResources) (*tektonv1.PipelineRun, error) {
 	builder := utils.NewPipelineRunBuilder(metadata.ManagedPipelineType.String(), resources.ReleasePlanAdmission.Namespace).
 		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, integrationgitops.PipelinesAsCodePrefix)).
+		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, metadata.SpanContextAnnotation)).
 		WithFinalizer(metadata.ReleaseFinalizer).
 		WithLabels(map[string]string{
 			metadata.ApplicationNameLabel:  resources.ReleasePlan.Spec.Application,
@@ -1204,6 +1207,7 @@ func (a *adapter) createManagedPipelineRun(resources *loader.ProcessingResources
 func (a *adapter) createTenantPipelineRun(releasePlan *v1alpha1.ReleasePlan, snapshot *applicationapiv1alpha1.Snapshot) (*tektonv1.PipelineRun, error) {
 	builder := utils.NewPipelineRunBuilder(metadata.TenantPipelineType.String(), releasePlan.Namespace).
 		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, integrationgitops.PipelinesAsCodePrefix)).
+		WithAnnotations(metadata.GetAnnotationsWithPrefix(a.release, metadata.SpanContextAnnotation)).
 		WithFinalizer(metadata.ReleaseFinalizer).
 		WithLabels(map[string]string{
 			metadata.ApplicationNameLabel:  releasePlan.Spec.Application,
