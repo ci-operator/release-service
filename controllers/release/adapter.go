@@ -34,6 +34,7 @@ import (
 	"github.com/konflux-ci/release-service/api/v1alpha1"
 	"github.com/konflux-ci/release-service/loader"
 	"github.com/konflux-ci/release-service/metadata"
+	"github.com/konflux-ci/release-service/pkg/tracing"
 	"github.com/konflux-ci/release-service/syncer"
 	"github.com/konflux-ci/release-service/tekton"
 	"github.com/konflux-ci/release-service/tekton/utils"
@@ -1579,6 +1580,37 @@ func (a *adapter) registerManagedProcessingData(releasePipelineRun *tektonv1.Pip
 	return a.client.Status().Patch(a.ctx, a.release, patch)
 }
 
+// emitTimingSpans emits timing spans for a completed PipelineRun if not already emitted.
+func (a *adapter) emitTimingSpans(pipelineRun *tektonv1.PipelineRun) {
+	if pipelineRun == nil {
+		return
+	}
+	if _, found := pipelineRun.Annotations[metadata.TimingEmittedAnnotation]; found {
+		return
+	}
+
+	spanContext := pipelineRun.Annotations[metadata.SpanContextAnnotation]
+	if !tracing.EmitTimingSpans(pipelineRun, spanContext) {
+		return
+	}
+
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]string{
+				metadata.TimingEmittedAnnotation: "true",
+			},
+		},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		a.logger.Error(err, "failed to marshal timing emitted patch")
+		return
+	}
+	if err := a.client.Patch(a.ctx, pipelineRun, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+		a.logger.Error(err, "failed to annotate PipelineRun with timing emitted")
+	}
+}
+
 // registerTenantCollectorsProcessingStatus updates the status of the Release being processed by monitoring the status of the
 // associated tenant collectors Release PipelineRun and setting the appropriate state in the Release. If the PipelineRun hasn't
 // started/succeeded, no action will be taken.
@@ -1586,6 +1618,8 @@ func (a *adapter) registerTenantCollectorsProcessingStatus(pipelineRun *tektonv1
 	if pipelineRun == nil || !tekton.IsPipelineRunDone(pipelineRun) {
 		return nil
 	}
+
+	a.emitTimingSpans(pipelineRun)
 
 	patch := client.MergeFrom(a.release.DeepCopy())
 
@@ -1621,6 +1655,8 @@ func (a *adapter) registerTenantProcessingStatus(pipelineRun *tektonv1.PipelineR
 		return nil
 	}
 
+	a.emitTimingSpans(pipelineRun)
+
 	patch := client.MergeFrom(a.release.DeepCopy())
 
 	condition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
@@ -1654,6 +1690,8 @@ func (a *adapter) registerManagedCollectorsProcessingStatus(pipelineRun *tektonv
 	if pipelineRun == nil || !tekton.IsPipelineRunDone(pipelineRun) {
 		return nil
 	}
+
+	a.emitTimingSpans(pipelineRun)
 
 	patch := client.MergeFrom(a.release.DeepCopy())
 
@@ -1689,6 +1727,8 @@ func (a *adapter) registerManagedProcessingStatus(pipelineRun *tektonv1.Pipeline
 		return nil
 	}
 
+	a.emitTimingSpans(pipelineRun)
+
 	patch := client.MergeFrom(a.release.DeepCopy())
 
 	condition := pipelineRun.Status.GetCondition(apis.ConditionSucceeded)
@@ -1722,6 +1762,8 @@ func (a *adapter) registerFinalProcessingStatus(pipelineRun *tektonv1.PipelineRu
 	if pipelineRun == nil || !tekton.IsPipelineRunDone(pipelineRun) {
 		return nil
 	}
+
+	a.emitTimingSpans(pipelineRun)
 
 	patch := client.MergeFrom(a.release.DeepCopy())
 
