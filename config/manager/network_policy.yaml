@@ -41,3 +41,11 @@ spec:
       ports:
         - port: 5353
           protocol: UDP
+    # Allow gRPC export to OTel collector for distributed tracing
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: konflux-otel
+      ports:
+        - port: 4317
+          protocol: TCP
